@@ -1,0 +1,1 @@
+## Collection of Advanced Hunting queries that can be used as Detection Rules
