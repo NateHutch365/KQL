@@ -1,8 +1,8 @@
-// AH custom detection: disable when user risk flipped HIGH within the lookback (e.g., last 4h)
+// AH custom detection: disable when user risk flipped HIGH within the lookback (e.g., last 1h)
 // IMPORTANT: When creating the detection rule, set the frequency to run every hour. 
 // At 1h frequency, Advanced Hunting evaluates the last 4h of data (lookback).
-// This query ensures it only triggers if a user's risk was set to HIGH within that 4h window.
-let RiskWindow = 4h;
+// This query ensures it only triggers if a user's risk was set to HIGH within a 1h window.
+let RiskWindow = 1h;
 IdentityLogonEvents
 | where Timestamp > ago(30d)   // wide window just to borrow a ReportId (AH requires it)
 | summarize arg_max(Timestamp, ReportId, AccountUpn, AccountObjectId, Application, LogonType)
