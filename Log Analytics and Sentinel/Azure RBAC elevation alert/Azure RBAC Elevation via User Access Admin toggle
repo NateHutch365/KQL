@@ -1,0 +1,11 @@
+AuditLogs
+| where Category == "AzureRBACRoleManagementElevateAccess"
+| where ActivityDisplayName == "User has elevated their access to User Access Administrator for their Azure Resources"
+| extend Actor = tostring(InitiatedBy.user.displayName)
+| extend ActorUPN = tostring(InitiatedBy.user.userPrincipalName)
+| extend ActorId = tostring(InitiatedBy.user.id)
+| extend Operation = tostring(OperationName)
+| extend IPAddress = tostring(InitiatedBy.user.ipAddress)
+| extend AppId = tostring(InitiatedBy.app.appId)
+| project TimeGenerated, ActivityDisplayName, Category, Operation, Actor, ActorUPN, ActorId, IPAddress, AppId, Result, ResultReason, CorrelationId
+| order by TimeGenerated desc
