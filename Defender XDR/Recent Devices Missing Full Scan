@@ -1,3 +1,4 @@
+// All credit goes to Felix Brand - Taken from his post (https://www.linkedin.com/posts/felix-brand_defenderxdr-kql-microsoft-activity-7228749401849040896-0sNk)
 // Microsoft now recommends (https://lnkd.in/ewBryvhF) to have one initial full scan when you onboard your system into MDE. But MDE does not trigger a full scan after onboarding, this KQL query combined with a custom detection rule can trigger a scan. 
 // Once a scan is completed on an endpoint, it will not appear in this query again.
 
