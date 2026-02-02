@@ -2,6 +2,7 @@
 // IMPORTANT: When creating the detection rule, set the frequency to run every hour. 
 // At 1h frequency, Advanced Hunting evaluates the last 4h of data (lookback).
 // This query ensures it only triggers if a user's risk was set to HIGH within a 1h window.
+// Requires Defender for Identity
 let RiskWindow = 1h;
 IdentityLogonEvents
 | where Timestamp > ago(30d)   // wide window just to borrow a ReportId (AH requires it)

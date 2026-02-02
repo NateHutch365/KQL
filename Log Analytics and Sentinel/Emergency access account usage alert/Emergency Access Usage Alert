@@ -1,5 +1,0 @@
-// Search for multiple Object IDs (UserIds) - Emergency access accounts
-SigninLogs
-| where UserId == "Object ID here" or UserId == "Object ID here"
-| project TimeGenerated, Identity, UserPrincipalName, AppDisplayName, Status, Location, AuthenticationDetails
-| order by TimeGenerated desc

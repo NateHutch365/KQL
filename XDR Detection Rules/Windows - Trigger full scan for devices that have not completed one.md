@@ -1,6 +1,7 @@
 // Initial full scan helper for MDE onboarded devices
 // Use this in a custom detection rule with the "Run antivirus scan" (Full scan) action.
 // Map AV mode codes to friendly names
+// Will include Windows clients and servers - See client only query if you do not want ot include servers
 let AvModeDescription = dynamic({"0":"Normal", "1":"Passive", "4":"EDR Block"});
 let TimeRange = ago(1d);
 // 1. Find devices in Normal AV mode that have NOT completed a full scan
