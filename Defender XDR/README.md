@@ -1,1 +1,0 @@
-# KQL queries for Defender XDR
