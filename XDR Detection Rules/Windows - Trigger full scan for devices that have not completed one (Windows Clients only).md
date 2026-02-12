@@ -1,3 +1,4 @@
+```kql
 // Initial full scan helper for MDE onboarded devices
 // Use this in a custom detection rule with the "Run antivirus scan" (Full scan) action.
 let AvModeDescription = dynamic({"0":"Normal", "1":"Passive", "4":"EDR Block"});
@@ -40,3 +41,4 @@ DeviceEvents
     ReportId,   // REQUIRED for custom detections
     Timestamp   // REQUIRED for custom detections
     | take 50
+```

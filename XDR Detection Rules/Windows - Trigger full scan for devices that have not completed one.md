@@ -1,3 +1,4 @@
+```kql
 // Initial full scan helper for MDE onboarded devices
 // Use this in a custom detection rule with the "Run antivirus scan" (Full scan) action.
 // Map AV mode codes to friendly names
@@ -33,3 +34,4 @@ DeviceEvents
     ReportId,   // REQUIRED for custom detections
     Timestamp   // REQUIRED for custom detections
     | take 50
+```
