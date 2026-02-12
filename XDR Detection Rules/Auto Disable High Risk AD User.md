@@ -1,3 +1,4 @@
+```kql
 // AH custom detection: disable when user risk flipped HIGH within the lookback (e.g., last 1h)
 // IMPORTANT: When creating the detection rule, set the frequency to run every hour. 
 // At 1h frequency, Advanced Hunting evaluates the last 4h of data (lookback).
@@ -25,3 +26,4 @@ IdentityLogonEvents
     OnPremSid,                // <-- REQUIRED for the "Disable user" action
     RiskSetTime, RiskLevel, RiskLevelDetails,
     Application, LogonType
+```
